@@ -1,0 +1,54 @@
+# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Packaging / build outputs
+build/
+dist/
+*.egg-info/
+
+# Test / type check / lint caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# IDE/editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Runtime / generated data (do not commit)
+storage/pill_counter.sqlite3
+storage/pill_counter.sqlite3-shm
+storage/pill_counter.sqlite3-wal
+storage/*.sqlite3
+storage/*.sqlite3-*
+
+storage/logs/**
+storage/reports/**
+!storage/logs/.gitkeep
+!storage/reports/.gitkeep
+
+# Optional: If you don't want to version model weights, uncomment:
+# Networks/weights/
+# Networks/OSNet/*.pth

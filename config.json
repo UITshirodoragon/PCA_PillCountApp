@@ -1,0 +1,43 @@
+{
+  "camera": {
+    "device_index": 0,
+    "width": 640,
+    "height": 480,
+    "fps": 30,
+    "profile": "fixed_640x480"
+  },
+  "model": {
+    "model_path": "./Networks/weights/model_best.pth",
+    "model_arch": "PANet",
+    "threshold": 0.3,
+    "nms_ksize": 3,
+    "min_peak": 0.25,
+    "max_peaks": 500,
+    "realtime_fps": 8,
+    "smoothing_alpha": 0.0
+  },
+  "serial": {
+    "port": "/dev/ttyACM0",
+    "baud": 115200,
+    "stream_weight": false,
+    "stable_window": 8,
+    "enabled": false
+  },
+  "share": {
+    "enable_qr_share": true,
+    "port": 5000,
+    "bind_all": true,
+    "token_required": true
+  },
+  "cloudflare": {
+    "enabled": true,
+    "cloudflared_path": "cloudflared",
+    "auto_start": true,
+    "public_url": ""
+  },
+  "storage": {
+    "root_dir": "storage",
+    "reports_dir": "storage/reports",
+    "logs_dir": "storage/logs"
+  }
+}

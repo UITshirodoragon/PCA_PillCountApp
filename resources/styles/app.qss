@@ -1,0 +1,814 @@
+/* Pill Counter v0.1.2 medical palette */
+* {
+  font-family: "DejaVu Sans";
+  font-size: 16px;
+  color: #24313a;
+}
+
+QWidget#RootWidget,
+QMainWindow,
+QWidget {
+  background: #fffeef;
+}
+
+QLabel {
+  background: transparent;
+  color: #24313a;
+}
+
+QFrame#ScreenHeader {
+  background: #ccede6;
+  border-bottom: 2px solid #8ebcca;
+}
+QLabel#ScreenTitle {
+  color: #4b7a9f;
+  font-size: 22px;
+  font-weight: 700;
+}
+QPushButton#MenuIconButton {
+  background: #4b7a9f;
+  color: #fffeef;
+  border: 2px solid #4b7a9f;
+  border-radius: 14px;
+  min-width: 58px;
+  min-height: 44px;
+  font-size: 26px;
+  font-weight: 700;
+}
+
+QLabel#MenuTitle {
+  color: #4b7a9f;
+  font-size: 44px;
+  font-weight: 800;
+}
+QLabel#VersionTiny {
+  color: #4b7a9f;
+  font-size: 15px;
+  font-weight: 600;
+}
+QLabel#MenuTime {
+  color: #4b7a9f;
+  font-size: 26px;
+  font-weight: 700;
+}
+QLabel#StatusBadge {
+  background: #ccede6;
+  color: #4b7a9f;
+  font-size: 17px;
+  font-weight: 700;
+  padding: 10px 14px;
+  border-radius: 14px;
+  border: 2px solid #8ebcca;
+}
+QPushButton#MenuButton {
+  background: #4b7a9f;
+  color: #fffeef;
+  border: 3px solid #8ebcca;
+  border-radius: 24px;
+  font-size: 24px;
+  font-weight: 800;
+  padding: 18px;
+  text-align: center;
+}
+QPushButton#MenuButton:pressed {
+  background: #8ebcca;
+  color: #24313a;
+}
+QFrame#MenuFooter {
+  background: #ccede6;
+  border: 2px solid #8ebcca;
+  border-radius: 18px;
+}
+QLabel#MenuHint, QLabel#MutedText {
+  color: #4b7a9f;
+  font-size: 15px;
+}
+
+QFrame#CountCard, QFrame#SessionCard, QFrame#SettingsCard {
+  background: #ccede6;
+  border: 2px solid #8ebcca;
+  border-radius: 22px;
+}
+QFrame#CameraCard {
+  background: #4b7a9f;
+  border: 3px solid #8ebcca;
+  border-radius: 24px;
+}
+QLabel#PreviewLabel {
+  background: #0c151c;
+  color: #fffeef;
+  border: 3px solid #ccede6;
+  border-radius: 18px;
+  font-size: 20px;
+}
+QLabel#SmallCaps {
+  color: #4b7a9f;
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: 1px;
+}
+QLabel#BigCount {
+  color: #4b7a9f;
+  background: #fffeef;
+  border: 3px solid #8ebcca;
+  border-radius: 22px;
+  font-size: 84px;
+  font-weight: 900;
+  padding: 8px;
+}
+QLabel#MetricLabel {
+  background: #fffeef;
+  color: #4b7a9f;
+  border: 2px solid #8ebcca;
+  border-radius: 12px;
+  padding: 8px 10px;
+  font-size: 18px;
+  font-weight: 700;
+}
+QLabel#StatePill {
+  background: #8ebcca;
+  color: #24313a;
+  border: 2px solid #4b7a9f;
+  border-radius: 14px;
+  padding: 9px;
+  font-size: 18px;
+  font-weight: 800;
+}
+QLabel#StatePill[danger="true"] {
+  background: #cc0000;
+  color: #fffeef;
+  border-color: #cc0000;
+}
+QLabel#ShareText {
+  background: #fffeef;
+  color: #4b7a9f;
+  border: 2px solid #8ebcca;
+  border-radius: 12px;
+  padding: 8px;
+}
+
+QPushButton {
+  background: #fffeef;
+  color: #4b7a9f;
+  border: 2px solid #8ebcca;
+  border-radius: 15px;
+  padding: 10px 16px;
+  font-size: 18px;
+  font-weight: 700;
+}
+QPushButton:pressed, QPushButton:checked {
+  background: #8ebcca;
+  color: #24313a;
+}
+QPushButton#PrimaryButton {
+  background: #4b7a9f;
+  color: #fffeef;
+  border: 3px solid #4b7a9f;
+  border-radius: 18px;
+  font-size: 22px;
+  font-weight: 900;
+}
+QPushButton#SecondaryButton {
+  background: #8ebcca;
+  color: #24313a;
+  border: 2px solid #4b7a9f;
+}
+QPushButton#ShutterButton {
+  background: #fffeef;
+  color: #cc0000;
+  border: 4px solid #cc0000;
+  border-radius: 28px;
+  min-width: 76px;
+  min-height: 56px;
+  font-size: 18px;
+  font-weight: 900;
+}
+QPushButton#DangerButton {
+  background: #cc0000;
+  color: #fffeef;
+  border: 2px solid #cc0000;
+}
+
+QLineEdit, QTextEdit, QPlainTextEdit, QComboBox, QSpinBox, QDoubleSpinBox {
+  background: #fffeef;
+  color: #24313a;
+  border: 2px solid #8ebcca;
+  border-radius: 12px;
+  padding: 8px;
+  font-size: 17px;
+  selection-background-color: #8ebcca;
+}
+QLineEdit:focus, QTextEdit:focus, QComboBox:focus, QSpinBox:focus, QDoubleSpinBox:focus {
+  border: 3px solid #4b7a9f;
+}
+QCheckBox {
+  color: #4b7a9f;
+  background: transparent;
+  font-weight: 700;
+}
+QFrame#SegmentBox {
+  background: #fffeef;
+  border: 2px solid #8ebcca;
+  border-radius: 16px;
+}
+
+QTabWidget::pane {
+  border: 2px solid #8ebcca;
+  border-radius: 14px;
+  background: #ccede6;
+}
+QTabBar::tab {
+  background: #fffeef;
+  color: #4b7a9f;
+  border: 2px solid #8ebcca;
+  padding: 10px 18px;
+  border-top-left-radius: 12px;
+  border-top-right-radius: 12px;
+  font-weight: 700;
+}
+QTabBar::tab:selected {
+  background: #4b7a9f;
+  color: #fffeef;
+}
+QTableWidget, QHeaderView::section {
+  background: #fffeef;
+  color: #24313a;
+  border: 1px solid #8ebcca;
+}
+QHeaderView::section {
+  background: #4b7a9f;
+  color: #fffeef;
+  padding: 8px;
+  font-weight: 800;
+}
+
+QFrame#SideDrawer {
+  background: #ccede6;
+  border-right: 3px solid #4b7a9f;
+}
+
+QWidget#AppOverlay {
+  background: rgba(75, 122, 159, 120);
+}
+QFrame#OverlayCard {
+  background: #fffeef;
+  border: 3px solid #4b7a9f;
+  border-radius: 24px;
+}
+QLabel#OverlayTitle {
+  color: #4b7a9f;
+  font-size: 26px;
+  font-weight: 900;
+}
+QLabel#OverlayMessage {
+  color: #24313a;
+  font-size: 19px;
+}
+
+QWidget#VirtualKeyboard {
+  background: #ccede6;
+  border: 4px solid #4b7a9f;
+  border-radius: 20px;
+}
+QLabel#KeyboardPreview {
+  background: #fffeef;
+  color: #24313a;
+  border: 2px solid #8ebcca;
+  border-radius: 12px;
+  padding: 8px;
+  min-height: 28px;
+}
+QPushButton#KeyboardKey {
+  background: #fffeef;
+  color: #4b7a9f;
+  border: 2px solid #4b7a9f;
+  border-radius: 10px;
+  font-size: 17px;
+  font-weight: 800;
+}
+QPushButton#KeyboardKey:pressed {
+  background: #8ebcca;
+}
+QFrame#CameraCard QCheckBox {
+  color: #fffeef;
+}
+QFrame#CameraCard QPushButton {
+  min-height: 46px;
+}
+
+/* v0.1.2 UI/UX refinements: PharmCam/VIVID-inspired landscape counting */
+QWidget#CountPage {
+  background: #fffeef;
+}
+QLabel#CountHint {
+  background: #ccede6;
+  color: #4b7a9f;
+  border: 2px solid #8ebcca;
+  border-radius: 14px;
+  padding: 8px 12px;
+  font-size: 16px;
+  font-weight: 700;
+}
+QFrame#CountCard {
+  background: #ccede6;
+  border: 3px solid #8ebcca;
+  border-radius: 24px;
+}
+QFrame#CountCard QLabel {
+  background: transparent;
+}
+QLabel#BigCount {
+  color: #4b7a9f;
+  background: #fffeef;
+  border: 4px solid #cc0000;
+  border-radius: 28px;
+  font-size: 96px;
+  font-weight: 900;
+  padding: 4px;
+}
+QLabel#MetricLabel {
+  background: #fffeef;
+  color: #4b7a9f;
+  border: 2px solid #8ebcca;
+  border-left: 7px solid #4b7a9f;
+  border-radius: 12px;
+  padding: 8px 10px;
+  font-size: 18px;
+  font-weight: 800;
+}
+QLabel#CalcPreview {
+  background: #8ebcca;
+  color: #24313a;
+  border: 2px solid #4b7a9f;
+  border-radius: 12px;
+  padding: 7px 10px;
+  font-size: 16px;
+  font-weight: 800;
+}
+QFrame#CameraCard {
+  background: #4b7a9f;
+  border: 4px solid #8ebcca;
+  border-radius: 28px;
+}
+QLabel#PreviewLabel {
+  background: #0c151c;
+  color: #fffeef;
+  border: 4px solid #ccede6;
+  border-radius: 22px;
+  font-size: 20px;
+}
+QPushButton#CameraToolButton {
+  background: #ccede6;
+  color: #4b7a9f;
+  border: 2px solid #8ebcca;
+  border-radius: 14px;
+  min-height: 42px;
+  font-weight: 800;
+}
+QPushButton#CameraToolButton:pressed {
+  background: #8ebcca;
+}
+QPushButton#RoundCalcButton {
+  background: #ccede6;
+  color: #4b7a9f;
+  border: 4px solid #4b7a9f;
+  border-radius: 35px;
+  min-width: 72px;
+  font-size: 34px;
+  font-weight: 900;
+}
+QPushButton#RoundCalcButton:pressed {
+  background: #8ebcca;
+}
+QPushButton#ShutterButton {
+  background: #fffeef;
+  color: #cc0000;
+  border: 5px solid #cc0000;
+  border-radius: 35px;
+  min-width: 132px;
+  font-size: 22px;
+  font-weight: 900;
+}
+QPushButton#ShutterButton:checked {
+  background: #cc0000;
+  color: #fffeef;
+}
+QPushButton#AccentButton {
+  background: #8ebcca;
+  color: #24313a;
+  border: 3px solid #cc0000;
+  border-radius: 18px;
+  font-size: 19px;
+  font-weight: 900;
+}
+QFrame#FloatingSessionPanel {
+  background: #fffeef;
+  border: 4px solid #4b7a9f;
+  border-left: 8px solid #cc0000;
+  border-radius: 24px;
+}
+QFrame#FloatingSessionPanel QLabel {
+  background: transparent;
+  color: #4b7a9f;
+  font-weight: 800;
+}
+QLabel#FloatingTitle {
+  color: #4b7a9f;
+  font-size: 24px;
+  font-weight: 900;
+}
+QPushButton#ClosePopupButton {
+  background: #cc0000;
+  color: #fffeef;
+  border: 2px solid #cc0000;
+  border-radius: 21px;
+  font-size: 24px;
+  font-weight: 900;
+  padding: 0;
+}
+QWidget#VirtualKeyboard {
+  background: #ccede6;
+  border: 5px solid #4b7a9f;
+  border-top: 7px solid #cc0000;
+  border-radius: 22px;
+}
+QLabel#KeyboardContext {
+  background: #4b7a9f;
+  color: #fffeef;
+  border: 2px solid #4b7a9f;
+  border-radius: 12px;
+  padding: 8px 12px;
+  font-size: 17px;
+  font-weight: 900;
+}
+QLabel#KeyboardPreview {
+  background: #fffeef;
+  color: #24313a;
+  border: 3px solid #8ebcca;
+  border-left: 8px solid #cc0000;
+  border-radius: 12px;
+  padding: 7px 10px;
+  font-size: 18px;
+  font-weight: 800;
+  min-height: 34px;
+}
+QFrame#KeyboardDivider {
+  background: #8ebcca;
+  border: none;
+}
+QPushButton#KeyboardKey,
+QPushButton#KeyboardUtilityKey {
+  background: #fffeef;
+  color: #4b7a9f;
+  border: 3px solid #4b7a9f;
+  border-radius: 11px;
+  min-height: 40px;
+  font-size: 17px;
+  font-weight: 900;
+}
+QPushButton#KeyboardKey:pressed,
+QPushButton#KeyboardUtilityKey:pressed,
+QPushButton#KeyboardUtilityKey:checked {
+  background: #8ebcca;
+  color: #24313a;
+}
+QPushButton#KeyboardAccentKey {
+  background: #4b7a9f;
+  color: #fffeef;
+  border: 3px solid #4b7a9f;
+  border-radius: 11px;
+  min-height: 40px;
+  font-size: 17px;
+  font-weight: 900;
+}
+QPushButton#KeyboardDangerKey,
+QPushButton#KeyboardHideKey {
+  background: #cc0000;
+  color: #fffeef;
+  border: 3px solid #cc0000;
+  border-radius: 11px;
+  min-height: 40px;
+  font-size: 17px;
+  font-weight: 900;
+}
+QLineEdit, QTextEdit, QPlainTextEdit, QComboBox, QSpinBox, QDoubleSpinBox {
+  background: #fffeef;
+  color: #24313a;
+  border: 2px solid #8ebcca;
+  border-radius: 12px;
+  padding: 8px;
+  selection-background-color: #8ebcca;
+}
+QLineEdit:focus, QTextEdit:focus, QPlainTextEdit:focus, QComboBox:focus, QSpinBox:focus, QDoubleSpinBox:focus {
+  border: 3px solid #cc0000;
+}
+QWidget#AppOverlay {
+  background: rgba(75, 122, 159, 135);
+}
+QFrame#OverlayCard {
+  background: #fffeef;
+  border: 4px solid #4b7a9f;
+  border-top: 8px solid #cc0000;
+  border-radius: 24px;
+}
+
+/* v0.1.3 compact 1024x600 layout fixes */
+QPushButton#FloatingMenuButton {
+  background: rgba(75, 122, 159, 185);
+  color: #fffeef;
+  border: 2px solid rgba(204, 237, 230, 210);
+  border-radius: 15px;
+  font-size: 22px;
+  font-weight: 900;
+  padding: 0;
+}
+QPushButton#FloatingMenuButton:pressed {
+  background: rgba(204, 0, 0, 210);
+  color: #fffeef;
+}
+QWidget#CountPage {
+  background: #fffeef;
+}
+QFrame#ActionRail {
+  background: #ccede6;
+  border: 2px solid #8ebcca;
+  border-radius: 18px;
+}
+QFrame#CountCard {
+  background: #ccede6;
+  border: 2px solid #8ebcca;
+  border-left: 6px solid #cc0000;
+  border-radius: 18px;
+}
+QFrame#CountCard QLabel {
+  background: transparent;
+}
+QLabel#SmallCaps {
+  color: #4b7a9f;
+  font-size: 14px;
+  font-weight: 900;
+}
+QLabel#BigCount {
+  color: #4b7a9f;
+  background: #fffeef;
+  border: 3px solid #cc0000;
+  border-radius: 18px;
+  font-size: 66px;
+  font-weight: 900;
+  padding: 0;
+}
+QLabel#StatePill {
+  background: #8ebcca;
+  color: #24313a;
+  border: 2px solid #4b7a9f;
+  border-radius: 12px;
+  padding: 2px 4px;
+  font-size: 14px;
+  font-weight: 900;
+}
+QLabel#StatePill[danger="true"] {
+  background: #cc0000;
+  color: #fffeef;
+  border-color: #cc0000;
+}
+QLabel#MetricLabel {
+  background: #fffeef;
+  color: #4b7a9f;
+  border: 1px solid #8ebcca;
+  border-left: 5px solid #4b7a9f;
+  border-radius: 9px;
+  padding: 3px 6px;
+  font-size: 14px;
+  font-weight: 800;
+}
+QLabel#CalcPreview {
+  background: #8ebcca;
+  color: #24313a;
+  border: 1px solid #4b7a9f;
+  border-radius: 9px;
+  padding: 3px 6px;
+  font-size: 13px;
+  font-weight: 800;
+}
+QLabel#CountHint, QLabel#BottomHint {
+  background: #ccede6;
+  color: #4b7a9f;
+  border: 1px solid #8ebcca;
+  border-radius: 10px;
+  padding: 4px 6px;
+  font-size: 12px;
+  font-weight: 700;
+}
+QFrame#CameraCard {
+  background: #24313a;
+  border: 2px solid #4b7a9f;
+  border-radius: 18px;
+}
+QFrame#CameraTopBar,
+QFrame#CaptureBar {
+  background: rgba(204, 237, 230, 24);
+  border: 1px solid rgba(204, 237, 230, 90);
+  border-radius: 12px;
+}
+QLabel#PreviewLabel {
+  background: transparent;
+  color: #fffeef;
+  border: none;
+  border-radius: 0;
+  font-size: 17px;
+}
+QLabel#RailTitle {
+  background: #fffeef;
+  color: #4b7a9f;
+  border: 1px solid #8ebcca;
+  border-left: 5px solid #cc0000;
+  border-radius: 9px;
+  font-size: 13px;
+  font-weight: 900;
+}
+QPushButton#CameraToolButton,
+QPushButton#SecondaryButton,
+QPushButton#AccentButton {
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 850;
+  padding: 3px 6px;
+}
+QPushButton#CameraToolButton {
+  background: #fffeef;
+  color: #4b7a9f;
+  border: 2px solid #8ebcca;
+  min-height: 30px;
+}
+QFrame#CameraCard QPushButton#CameraToolButton {
+  min-height: 30px;
+  max-height: 34px;
+}
+QPushButton#SecondaryButton {
+  background: #8ebcca;
+  color: #24313a;
+  border: 2px solid #4b7a9f;
+}
+QPushButton#AccentButton {
+  background: #ccede6;
+  color: #4b7a9f;
+  border: 2px solid #cc0000;
+}
+QPushButton#PrimaryButton {
+  background: #4b7a9f;
+  color: #fffeef;
+  border: 2px solid #4b7a9f;
+  border-radius: 14px;
+  font-size: 16px;
+  font-weight: 900;
+  padding: 4px 8px;
+}
+QPushButton#ShutterButton {
+  background: #fffeef;
+  color: #cc0000;
+  border: 4px solid #cc0000;
+  border-radius: 20px;
+  font-size: 15px;
+  font-weight: 900;
+  padding: 2px 4px;
+  min-height: 46px;
+}
+QPushButton#ShutterButton:checked {
+  background: #cc0000;
+  color: #fffeef;
+}
+QPushButton#RoundCalcButton {
+  background: #ccede6;
+  color: #4b7a9f;
+  border: 3px solid #4b7a9f;
+  border-radius: 18px;
+  font-size: 25px;
+  font-weight: 900;
+  padding: 0;
+  min-width: 72px;
+  min-height: 46px;
+}
+QFrame#CameraCard QCheckBox {
+  color: #ccede6;
+}
+QCheckBox {
+  color: #4b7a9f;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 800;
+}
+QFrame#FloatingSessionPanel {
+  background: #fffeef;
+  border: 3px solid #4b7a9f;
+  border-left: 7px solid #cc0000;
+  border-radius: 18px;
+}
+QLabel#FloatingTitle {
+  color: #4b7a9f;
+  font-size: 18px;
+  font-weight: 900;
+}
+QPushButton#ClosePopupButton {
+  background: #cc0000;
+  color: #fffeef;
+  border: 2px solid #cc0000;
+  border-radius: 15px;
+  font-size: 20px;
+  font-weight: 900;
+  padding: 0;
+}
+QFrame#FloatingSessionPanel QLineEdit,
+QFrame#FloatingSessionPanel QTextEdit,
+QFrame#FloatingSessionPanel QComboBox,
+QFrame#FloatingSessionPanel QSpinBox {
+  font-size: 14px;
+  padding: 4px;
+  border-radius: 8px;
+}
+QFrame#FloatingSessionPanel QLabel {
+  font-size: 13px;
+  background: transparent;
+}
+QFrame#FloatingSessionPanel QPushButton {
+  font-size: 13px;
+  padding: 3px 5px;
+  border-radius: 9px;
+}
+QLabel#ShareText {
+  background: #fffeef;
+  color: #4b7a9f;
+  border: 1px solid #8ebcca;
+  border-radius: 9px;
+  padding: 4px;
+  font-size: 12px;
+}
+QFrame#SideDrawer {
+  background: rgba(204, 237, 230, 242);
+  border-right: 3px solid #4b7a9f;
+}
+QFrame#SideDrawer QPushButton {
+  font-size: 15px;
+  padding: 5px 8px;
+  border-radius: 12px;
+}
+QWidget#VirtualKeyboard {
+  background: #ccede6;
+  border: 4px solid #4b7a9f;
+  border-top: 5px solid #cc0000;
+  border-radius: 16px;
+}
+QLabel#KeyboardContext {
+  background: #4b7a9f;
+  color: #fffeef;
+  border: 1px solid #4b7a9f;
+  border-radius: 9px;
+  padding: 4px 8px;
+  font-size: 13px;
+  font-weight: 900;
+}
+QLabel#KeyboardPreview {
+  background: #fffeef;
+  color: #24313a;
+  border: 2px solid #8ebcca;
+  border-left: 5px solid #cc0000;
+  border-radius: 9px;
+  padding: 4px 8px;
+  font-size: 14px;
+  font-weight: 800;
+  min-height: 24px;
+}
+QPushButton#KeyboardKey,
+QPushButton#KeyboardUtilityKey,
+QPushButton#KeyboardAccentKey,
+QPushButton#KeyboardDangerKey,
+QPushButton#KeyboardHideKey {
+  border-radius: 8px;
+  min-height: 28px;
+  font-size: 13px;
+  font-weight: 900;
+  padding: 0 2px;
+}
+QPushButton#KeyboardKey,
+QPushButton#KeyboardUtilityKey {
+  background: #fffeef;
+  color: #4b7a9f;
+  border: 2px solid #4b7a9f;
+}
+QPushButton#KeyboardAccentKey {
+  background: #4b7a9f;
+  color: #fffeef;
+  border: 2px solid #4b7a9f;
+}
+QPushButton#KeyboardDangerKey,
+QPushButton#KeyboardHideKey {
+  background: #cc0000;
+  color: #fffeef;
+  border: 2px solid #cc0000;
+}
+QFrame#KeyboardDivider {
+  background: #8ebcca;
+  border: none;
+}
+QLineEdit:focus, QTextEdit:focus, QPlainTextEdit:focus, QComboBox:focus, QSpinBox:focus, QDoubleSpinBox:focus {
+  border: 2px solid #cc0000;
+}
