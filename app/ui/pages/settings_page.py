@@ -37,9 +37,17 @@ class SettingsPage(QWidget):
         self.ed_model_arch = QLineEdit(); self.ed_model_arch.setProperty("kb_label", "Model arch"); self.ed_model_arch.setPlaceholderText("PANet")
         self.sp_thr = QSpinBox(); self.sp_thr.setProperty("kb_label", "Threshold percent"); self.sp_thr.setRange(1, 99)
         self.sp_ksize = QSpinBox(); self.sp_ksize.setProperty("kb_label", "NMS kernel size"); self.sp_ksize.setRange(3, 21); self.sp_ksize.setSingleStep(2)
+        self.sp_min_peak = QDoubleSpinBox(); self.sp_min_peak.setProperty("kb_label", "Minimum peak score"); self.sp_min_peak.setRange(0.0, 5.0); self.sp_min_peak.setDecimals(3); self.sp_min_peak.setSingleStep(0.05)
         self.sp_max_peaks = QSpinBox(); self.sp_max_peaks.setProperty("kb_label", "Max peaks"); self.sp_max_peaks.setRange(10, 5000)
         self.sp_rt_fps = QSpinBox(); self.sp_rt_fps.setProperty("kb_label", "Realtime inference FPS"); self.sp_rt_fps.setRange(1, 30)
         self.sp_smooth = QDoubleSpinBox(); self.sp_smooth.setProperty("kb_label", "Smoothing alpha"); self.sp_smooth.setRange(0.0, 0.95); self.sp_smooth.setSingleStep(0.05)
+        self.sp_count_window = QSpinBox(); self.sp_count_window.setProperty("kb_label", "Count queue window"); self.sp_count_window.setRange(1, 31); self.sp_count_window.setSingleStep(2)
+        self.sp_count_votes = QSpinBox(); self.sp_count_votes.setProperty("kb_label", "Count min votes"); self.sp_count_votes.setRange(1, 31)
+        self.chk_roi = QCheckBox("Enable ROI")
+        self.sp_roi_x = QSpinBox(); self.sp_roi_x.setProperty("kb_label", "ROI x"); self.sp_roi_x.setRange(0, 320)
+        self.sp_roi_y = QSpinBox(); self.sp_roi_y.setProperty("kb_label", "ROI y"); self.sp_roi_y.setRange(0, 240)
+        self.sp_roi_w = QSpinBox(); self.sp_roi_w.setProperty("kb_label", "ROI width"); self.sp_roi_w.setRange(1, 320)
+        self.sp_roi_h = QSpinBox(); self.sp_roi_h.setProperty("kb_label", "ROI height"); self.sp_roi_h.setRange(1, 240)
 
         self.chk_share = QCheckBox("Enable report sharing")
         self.chk_token = QCheckBox("Require token in report URL")
@@ -57,7 +65,13 @@ class SettingsPage(QWidget):
         grid.addWidget(QLabel("NMS"), r, 5); grid.addWidget(self.sp_ksize, r, 6); r += 1
         grid.addWidget(QLabel("Realtime FPS"), r, 0); grid.addWidget(self.sp_rt_fps, r, 1)
         grid.addWidget(QLabel("Max peaks"), r, 2); grid.addWidget(self.sp_max_peaks, r, 3)
-        grid.addWidget(QLabel("Smoothing"), r, 4); grid.addWidget(self.sp_smooth, r, 5); r += 1
+        grid.addWidget(QLabel("Min peak"), r, 4); grid.addWidget(self.sp_min_peak, r, 5); r += 1
+        grid.addWidget(QLabel("Smoothing"), r, 0); grid.addWidget(self.sp_smooth, r, 1)
+        grid.addWidget(QLabel("Queue"), r, 2); grid.addWidget(self.sp_count_window, r, 3)
+        grid.addWidget(QLabel("Votes"), r, 4); grid.addWidget(self.sp_count_votes, r, 5)
+        grid.addWidget(self.chk_roi, r, 6); r += 1
+        grid.addWidget(QLabel("ROI x/y"), r, 0); grid.addWidget(self.sp_roi_x, r, 1); grid.addWidget(self.sp_roi_y, r, 2)
+        grid.addWidget(QLabel("ROI w/h"), r, 3); grid.addWidget(self.sp_roi_w, r, 4); grid.addWidget(self.sp_roi_h, r, 5); r += 1
         grid.addWidget(self.chk_share, r, 0, 1, 2); grid.addWidget(QLabel("Port"), r, 2); grid.addWidget(self.sp_share_port, r, 3); grid.addWidget(self.chk_token, r, 4, 1, 3); r += 1
         grid.addWidget(self.chk_tunnel, r, 0, 1, 3); grid.addWidget(QLabel("cloudflared"), r, 3); grid.addWidget(self.ed_cloudflared, r, 4, 1, 3); r += 1
 

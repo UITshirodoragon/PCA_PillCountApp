@@ -13,6 +13,12 @@ class CameraSettings:
     height: int = 480
     fps: int = 30
     profile: str = "balanced"  # fast | balanced | quality | custom
+    lock_controls: bool = True
+    auto_exposure_value: float = 1.0
+    exposure: float = 156.0
+    gain: float = 0.0
+    lock_white_balance: bool = True
+    white_balance_temperature: int = 4500
 
 
 @dataclass
@@ -25,6 +31,13 @@ class ModelSettings:
     max_peaks: int = 500
     realtime_fps: int = 8
     smoothing_alpha: float = 0.0
+    count_queue_window: int = 7
+    count_queue_min_votes: int = 3
+    roi_enabled: bool = True
+    roi_x: int = 32
+    roi_y: int = 16
+    roi_w: int = 280
+    roi_h: int = 208
 
 
 @dataclass

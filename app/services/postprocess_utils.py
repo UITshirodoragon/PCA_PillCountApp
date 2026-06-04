@@ -30,6 +30,7 @@ _IMAGENET_STD = torch.tensor([0.229, 0.224, 0.225]).view(1, 3, 1, 1)
 class LmdsConfig:
     thr_ratio: float = 0.25     # threshold relative to max
     ksize: int = 5              # max-pool kernel for local maxima
+    min_peak: float = 0.0       # absolute score threshold
     min_max: float = 1e-6       # ignore maps with too small max
     max_peaks: int = 500        # cap peaks for safety
 
@@ -72,7 +73,8 @@ def lmds_from_map(map_hw: np.ndarray, cfg: LmdsConfig) -> Tuple[int, List[Tuple[
     if k % 2 == 0:
         k += 1
     pooled = F.max_pool2d(t, kernel_size=k, stride=1, padding=k // 2)
-    keep = (pooled == t) & (t > (cfg.thr_ratio * mmax))
+    abs_thr = max(float(cfg.thr_ratio) * mmax, float(cfg.min_peak))
+    keep = (pooled == t) & (t >= abs_thr)
     ys, xs = torch.nonzero(keep[0, 0], as_tuple=True)
     centers = [(int(x.item()), int(y.item())) for x, y in zip(xs, ys)]
     if len(centers) > cfg.max_peaks:

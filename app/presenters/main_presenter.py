@@ -4,6 +4,7 @@ import logging
 import os
 import secrets
 import shutil
+from collections import Counter, deque
 from datetime import datetime
 from typing import Optional
 
@@ -71,6 +72,9 @@ class MainPresenter(QObject):
         self._last_frame: Optional[Frame] = None
         self._frozen_frame: Optional[Frame] = None
         self._last_infer: Optional[InferResult] = None
+        self._count_window: deque[int] = deque(maxlen=max(1, int(getattr(self.cfg.model, "count_queue_window", 7) or 7)))
+        self._count_result_cache: dict[int, InferResult] = {}
+        self._display_count: Optional[int] = None
         self._lan_ip: str = get_lan_ip()
         self._share_visible_url: str = ""
         self._public_url: str = ""
@@ -186,20 +190,103 @@ class MainPresenter(QObject):
         sp.sp_rt_fps.setValue(int(ms.realtime_fps))
         sp.sp_thr.setValue(int(ms.threshold * 100))
         sp.sp_ksize.setValue(int(ms.nms_ksize))
+        sp.sp_min_peak.setValue(float(ms.min_peak))
         sp.sp_max_peaks.setValue(int(ms.max_peaks))
         sp.sp_smooth.setValue(float(ms.smoothing_alpha))
+        sp.sp_count_window.setValue(int(ms.count_queue_window))
+        sp.sp_count_votes.setValue(int(ms.count_queue_min_votes))
+        sp.chk_roi.setChecked(bool(ms.roi_enabled))
+        sp.sp_roi_x.setValue(int(ms.roi_x))
+        sp.sp_roi_y.setValue(int(ms.roi_y))
+        sp.sp_roi_w.setValue(int(ms.roi_w))
+        sp.sp_roi_h.setValue(int(ms.roi_h))
         sp.ed_model_path.setText(ms.model_path)
         sp.ed_model_arch.setText(ms.model_arch)
+        cp = self.window.page_count
+        cp.chk_smoothing.blockSignals(True)
+        cp.chk_smoothing.setChecked(float(ms.smoothing_alpha) > 0.0)
+        cp.chk_smoothing.blockSignals(False)
         self._apply_model_settings_to_infer()
 
     def _apply_model_settings_to_infer(self):
         ms = self.cfg.model
         self.infer_worker.set_model(ms.model_path, ms.model_arch)
-        self.infer_worker.set_params(ms.realtime_fps, ms.smoothing_alpha, ms.nms_ksize, ms.max_peaks, int(ms.threshold * 100))
+        self.infer_worker.set_params(
+            ms.realtime_fps,
+            ms.smoothing_alpha,
+            ms.nms_ksize,
+            ms.max_peaks,
+            int(ms.threshold * 100),
+            ms.min_peak,
+            ms.roi_enabled,
+            ms.roi_x,
+            ms.roi_y,
+            ms.roi_w,
+            ms.roi_h,
+        )
+        self._reset_count_stabilizer()
+
+    def _reset_count_stabilizer(self):
+        ms = self.cfg.model
+        window = max(1, int(getattr(ms, "count_queue_window", 7) or 7))
+        self._count_window = deque(maxlen=window)
+        self._count_result_cache = {}
+        self._display_count = None
+
+    def _stabilize_infer_result(self, res: InferResult) -> InferResult:
+        if self._frozen_frame is not None and res.ts_ms == self._frozen_frame.ts_ms:
+            self._reset_count_stabilizer()
+            self._count_window.append(int(res.count))
+            self._count_result_cache[int(res.count)] = res
+            self._display_count = int(res.count)
+            return res
+
+        ms = self.cfg.model
+        min_votes = max(1, int(getattr(ms, "count_queue_min_votes", 1) or 1))
+        min_votes = min(min_votes, max(1, self._count_window.maxlen or 1))
+        raw_count = int(res.count)
+
+        self._count_window.append(raw_count)
+        self._count_result_cache[raw_count] = res
+        votes = Counter(self._count_window)
+        best_votes = max(votes.values())
+        candidates = [c for c, v in votes.items() if v == best_votes]
+
+        if self._display_count in candidates:
+            chosen_count = int(self._display_count)
+        elif raw_count in candidates:
+            chosen_count = raw_count
+        else:
+            chosen_count = int(candidates[0])
+
+        if best_votes < min_votes and self._display_count is not None:
+            chosen_count = int(self._display_count)
+
+        self._display_count = chosen_count
+        source = self._count_result_cache.get(chosen_count, res)
+        return InferResult(
+            ts_ms=source.ts_ms,
+            count=chosen_count,
+            centers=source.centers,
+            mask_u8=source.mask_u8,
+            score_map=source.score_map,
+        )
 
     def _init_workers(self):
         self.camera_thread = QThread()
-        cam_cfg = CameraConfig(self.cfg.camera.device_index, self.cfg.camera.width, self.cfg.camera.height, self.cfg.camera.fps)
+        cam = self.cfg.camera
+        cam_cfg = CameraConfig(
+            cam.device_index,
+            cam.width,
+            cam.height,
+            cam.fps,
+            cam.lock_controls,
+            cam.auto_exposure_value,
+            cam.exposure,
+            cam.gain,
+            cam.lock_white_balance,
+            cam.white_balance_temperature,
+        )
         self.camera_worker = CameraWorker(self.bus, cam_cfg)
         self.camera_worker.moveToThread(self.camera_thread)
         self.camera_thread.started.connect(self.camera_worker.start)
@@ -268,9 +355,12 @@ class MainPresenter(QObject):
 
     @pyqtSlot(object)
     def on_infer(self, res: InferResult):
-        self._last_infer = res
-        self.window.page_count.set_count(int(res.count))
-        self.window.page_count.set_state("Counting")
+        if self._frozen_frame is not None and res.ts_ms != self._frozen_frame.ts_ms:
+            return
+        stable_res = self._stabilize_infer_result(res)
+        self._last_infer = stable_res
+        self.window.page_count.set_count(int(stable_res.count))
+        self.window.page_count.set_state("Frozen" if self._frozen_frame is not None else "Counting")
 
     @pyqtSlot()
     def on_start(self):
@@ -285,6 +375,9 @@ class MainPresenter(QObject):
         if freeze:
             if self._last_frame is not None:
                 self._frozen_frame = self._last_frame
+                self._last_infer = None
+                self._reset_count_stabilizer()
+                self.infer_worker.set_freeze_frame(self._frozen_frame)
             self.infer_worker.set_freeze(True)
             self.window.page_count.set_state("Frozen")
             self.bus.publish(AppEvent(AppEventType.LOG, "app", "Capture/Freeze"))
@@ -294,6 +387,9 @@ class MainPresenter(QObject):
     @pyqtSlot()
     def on_retake(self):
         self._frozen_frame = None
+        self._last_infer = None
+        self._reset_count_stabilizer()
+        self.infer_worker.set_freeze_frame(None)
         self.window.page_count.btn_freeze.setChecked(False)
         self.infer_worker.set_freeze(False)
         self.window.page_count.set_state("Ready")
@@ -516,7 +612,7 @@ class MainPresenter(QObject):
     def on_save_settings(self):
         sp = self.window.page_settings
         self.cfg.camera.device_index = int(sp.sp_cam_idx.value()); self.cfg.camera.width = int(sp.sp_cam_w.value()); self.cfg.camera.height = int(sp.sp_cam_h.value()); self.cfg.camera.fps = int(sp.sp_cam_fps.value())
-        self.cfg.model.model_path = sp.ed_model_path.text().strip(); self.cfg.model.model_arch = sp.ed_model_arch.text().strip(); self.cfg.model.threshold = float(sp.sp_thr.value()) / 100.0; self.cfg.model.nms_ksize = int(sp.sp_ksize.value()); self.cfg.model.max_peaks = int(sp.sp_max_peaks.value()); self.cfg.model.realtime_fps = int(sp.sp_rt_fps.value()); self.cfg.model.smoothing_alpha = float(sp.sp_smooth.value())
+        self.cfg.model.model_path = sp.ed_model_path.text().strip(); self.cfg.model.model_arch = sp.ed_model_arch.text().strip(); self.cfg.model.threshold = float(sp.sp_thr.value()) / 100.0; self.cfg.model.nms_ksize = int(sp.sp_ksize.value()); self.cfg.model.min_peak = float(sp.sp_min_peak.value()); self.cfg.model.max_peaks = int(sp.sp_max_peaks.value()); self.cfg.model.realtime_fps = int(sp.sp_rt_fps.value()); self.cfg.model.smoothing_alpha = float(sp.sp_smooth.value()); self.cfg.model.count_queue_window = int(sp.sp_count_window.value()); self.cfg.model.count_queue_min_votes = int(sp.sp_count_votes.value()); self.cfg.model.roi_enabled = bool(sp.chk_roi.isChecked()); self.cfg.model.roi_x = int(sp.sp_roi_x.value()); self.cfg.model.roi_y = int(sp.sp_roi_y.value()); self.cfg.model.roi_w = int(sp.sp_roi_w.value()); self.cfg.model.roi_h = int(sp.sp_roi_h.value())
         self.cfg.share.enable_qr_share = bool(sp.chk_share.isChecked()); self.cfg.share.port = int(sp.sp_share_port.value()); self.cfg.share.token_required = bool(sp.chk_token.isChecked()); self.cfg.share.bind_all = True
         self.cfg.cloudflare.enabled = bool(sp.chk_tunnel.isChecked()); self.cfg.cloudflare.cloudflared_path = sp.ed_cloudflared.text().strip() or "cloudflared"; self.cfg.cloudflare.auto_start = bool(sp.chk_tunnel.isChecked())
         self.cfg.serial.enabled = False; self.cfg.serial.stream_weight = False

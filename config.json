@@ -4,17 +4,30 @@
     "width": 640,
     "height": 480,
     "fps": 30,
-    "profile": "fixed_640x480"
+    "profile": "fixed_640x480",
+    "lock_controls": true,
+    "auto_exposure_value": 1.0,
+    "exposure": 156.0,
+    "gain": 0.0,
+    "lock_white_balance": true,
+    "white_balance_temperature": 4500
   },
   "model": {
     "model_path": "./Networks/weights/model_best.pth",
     "model_arch": "PANet",
-    "threshold": 0.3,
-    "nms_ksize": 3,
+    "threshold": 0.4,
+    "nms_ksize": 7,
     "min_peak": 0.25,
     "max_peaks": 500,
-    "realtime_fps": 8,
-    "smoothing_alpha": 0.0
+    "realtime_fps": 6,
+    "smoothing_alpha": 0.2,
+    "count_queue_window": 7,
+    "count_queue_min_votes": 3,
+    "roi_enabled": true,
+    "roi_x": 32,
+    "roi_y": 16,
+    "roi_w": 280,
+    "roi_h": 208
   },
   "serial": {
     "port": "/dev/ttyACM0",

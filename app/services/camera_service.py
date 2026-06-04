@@ -19,6 +19,12 @@ class CameraConfig:
     width: int = INFER_W
     height: int = INFER_H
     fps: int = 30
+    lock_controls: bool = True
+    auto_exposure_value: float = 1.0
+    exposure: float = 156.0
+    gain: float = 0.0
+    lock_white_balance: bool = True
+    white_balance_temperature: int = 4500
 
 
 class CameraService:
@@ -48,11 +54,33 @@ class CameraService:
         cap.set(cv2.CAP_PROP_FRAME_WIDTH, int(self.cfg.width))
         cap.set(cv2.CAP_PROP_FRAME_HEIGHT, int(self.cfg.height))
         cap.set(cv2.CAP_PROP_FPS, int(self.cfg.fps))
+        self._apply_camera_controls(cap)
 
         self.cap = cap
         self.connected = True
         log.info("Camera opened: index=%s target=%sx%s@%s", self.cfg.device_index, self.cfg.width, self.cfg.height, self.cfg.fps)
         return True
+
+    def _set_cap_prop(self, cap: cv2.VideoCapture, prop_name: str, value: float) -> None:
+        prop = getattr(cv2, prop_name, None)
+        if prop is None:
+            return
+        try:
+            ok = bool(cap.set(prop, float(value)))
+            got = cap.get(prop)
+            log.info("Camera control %s set=%s read=%s ok=%s", prop_name, value, got, ok)
+        except Exception as e:
+            log.warning("Camera control %s failed: %s", prop_name, e)
+
+    def _apply_camera_controls(self, cap: cv2.VideoCapture) -> None:
+        if bool(getattr(self.cfg, "lock_controls", False)):
+            self._set_cap_prop(cap, "CAP_PROP_AUTO_EXPOSURE", float(self.cfg.auto_exposure_value))
+            self._set_cap_prop(cap, "CAP_PROP_EXPOSURE", float(self.cfg.exposure))
+            self._set_cap_prop(cap, "CAP_PROP_GAIN", float(self.cfg.gain))
+
+        if bool(getattr(self.cfg, "lock_white_balance", False)):
+            self._set_cap_prop(cap, "CAP_PROP_AUTO_WB", 0.0)
+            self._set_cap_prop(cap, "CAP_PROP_WB_TEMPERATURE", float(self.cfg.white_balance_temperature))
 
     def close(self) -> None:
         try:
