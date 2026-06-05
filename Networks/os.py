@@ -336,62 +336,75 @@ class OSNet(BaseNet):
         
         return x
 
-def load_osnet_weights():
-  net = OSNet(
+def load_osnet_weights(channels, model_path):
+    net = OSNet(
         num_classes=1000,
         blocks=[OSBlock, OSBlock, OSBlock],
         layers=[2, 2, 2],
-        # channels=[16, 64, 96, 128],
-        channels=[64, 256, 384, 512],
+        channels=channels,
         loss='softmax',
-    ) 
-  model_path = './Networks/OSNet/osnet_x1_0_imagenet.pth'
-  state_dict = torch.load(model_path)
-  state_dict.pop("fc.0.weight")
-  state_dict.pop("fc.0.bias")
-  state_dict.pop("fc.1.weight")
-  state_dict.pop("fc.1.bias")
-  state_dict.pop("fc.1.running_mean")
-  state_dict.pop("fc.1.running_var")
-  state_dict.pop("fc.1.num_batches_tracked")
-  state_dict.pop("classifier.weight")
-  state_dict.pop("classifier.bias")
+    )
+    state_dict = torch.load(model_path, map_location="cpu")
+    for key in (
+        "fc.0.weight",
+        "fc.0.bias",
+        "fc.1.weight",
+        "fc.1.bias",
+        "fc.1.running_mean",
+        "fc.1.running_var",
+        "fc.1.num_batches_tracked",
+        "classifier.weight",
+        "classifier.bias",
+    ):
+        state_dict.pop(key, None)
 
-  net.load_state_dict(state_dict)
-  
-  return net
+    net.load_state_dict(state_dict)
+    return net
+
 
 class PANet(nn.Module):
-    def __init__(self):
+    def __init__(
+        self,
+        channels=(64, 256, 384, 512),
+        osnet_weight_path="./Networks/OSNet/osnet_x1_0_imagenet.pth",
+        decoder_channels=(256, 128, 64, 32),
+    ):
         super(PANet, self).__init__()
-        self.vgg = load_osnet_weights()
-        self.lms= PFE_module(512) #512 for 1_0; 128 for 0_25
-        #for small model 0_25
-        # self.de_pred = nn.Sequential(
-        #                     nn.ConvTranspose2d(64,32,4,stride=2,padding=1,output_padding=0,bias=True),
-        #                     nn.ReLU(),
-        #                     nn.ConvTranspose2d(32,16,4,stride=2,padding=1,output_padding=0,bias=True),
-        #                     nn.ReLU(),
-        #                     nn.ConvTranspose2d(16,8,4,stride=2,padding=1,output_padding=0,bias=True),
-        #                     nn.ReLU(),
-        #                     nn.ConvTranspose2d(8,1,4,stride=2,padding=1,output_padding=0,bias=True),
-        #                     )
-        
-        # for large model 1_0
+        self.vgg = load_osnet_weights(list(channels), osnet_weight_path)
+        self.lms = PFE_module(int(channels[-1]))
+        c0, c1, c2, c3 = [int(c) for c in decoder_channels]
         self.de_pred = nn.Sequential(
-                            nn.ConvTranspose2d(256,128,4,stride=2,padding=1,output_padding=0,bias=True),
+                            nn.ConvTranspose2d(c0,c1,4,stride=2,padding=1,output_padding=0,bias=True),
                             nn.ReLU(),
-                            nn.ConvTranspose2d(128,64,4,stride=2,padding=1,output_padding=0,bias=True),
+                            nn.ConvTranspose2d(c1,c2,4,stride=2,padding=1,output_padding=0,bias=True),
                             nn.ReLU(),
-                            nn.ConvTranspose2d(64,32,4,stride=2,padding=1,output_padding=0,bias=True),
+                            nn.ConvTranspose2d(c2,c3,4,stride=2,padding=1,output_padding=0,bias=True),
                             nn.ReLU(),
-                            nn.ConvTranspose2d(32,1,4,stride=2,padding=1,output_padding=0,bias=True),
+                            nn.ConvTranspose2d(c3,1,4,stride=2,padding=1,output_padding=0,bias=True),
                             )
-    def forward(self, x):  
-        x = self.vgg(x) 
-        x = self.lms(x)          
+    def forward(self, x):
+        x = self.vgg(x)
+        x = self.lms(x)
         x = self.de_pred(x)
         return x
+
+
+class PANetBase(PANet):
+    def __init__(self):
+        super(PANetBase, self).__init__(
+            channels=(64, 256, 384, 512),
+            osnet_weight_path="./Networks/OSNet/osnet_x1_0_imagenet.pth",
+            decoder_channels=(256, 128, 64, 32),
+        )
+
+
+class PANetNano(PANet):
+    def __init__(self):
+        super(PANetNano, self).__init__(
+            channels=(16, 64, 96, 128),
+            osnet_weight_path="./Networks/OSNet/osnet_x0_25_imagenet.pth",
+            decoder_channels=(64, 32, 16, 8),
+        )
 
 
 

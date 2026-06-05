@@ -109,5 +109,4 @@ def draw_overlay(frame_bgr: np.ndarray, centers: List[Tuple[int, int]], count: i
         cv2.circle(out, (int(x), int(y)), 3, (0, 0, 0), -1)
         cv2.circle(out, (int(x), int(y)), 2, (0, 255, 0), -1)
 
-    cv2.putText(out, f"Count: {int(count)}", (8, 28), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2, cv2.LINE_AA)
     return out

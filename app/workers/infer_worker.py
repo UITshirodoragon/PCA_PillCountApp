@@ -29,20 +29,31 @@ class InferWorker(QObject):
         self._last_infer_ms = 0
 
         self._model_path = ""
+        self._onnx_model_path = ""
         self._model_arch = ""
+        self._runtime = "pytorch"
+        self._reload_requested = False
         self._freeze_frame: Optional[Frame] = None
         self._freeze_frame_done = False
 
-    @pyqtSlot(str, str)
-    def set_model(self, model_path: str, model_arch: str):
-        self._model_path = model_path or ""
-        self._model_arch = model_arch or ""
-        # lazy load in loop
+    @pyqtSlot(str, str, str, str)
+    def set_model(self, runtime: str, model_path: str, onnx_model_path: str, model_arch: str):
+        new_runtime = (runtime or "pytorch").strip().lower()
+        new_path = model_path or ""
+        new_onnx_path = onnx_model_path or ""
+        new_arch = model_arch or ""
+        if (new_runtime, new_path, new_onnx_path, new_arch) != (self._runtime, self._model_path, self._onnx_model_path, self._model_arch):
+            self._reload_requested = True
+        self._runtime = new_runtime
+        self._model_path = new_path
+        self._onnx_model_path = new_onnx_path
+        self._model_arch = new_arch
 
-    @pyqtSlot(int, float, int, int, int, float, bool, int, int, int, int)
+    @pyqtSlot(int, int, float, int, int, int, float, bool, int, int, int, int)
     def set_params(
         self,
         target_fps: int,
+        torch_num_threads: int,
         smoothing_alpha: float,
         ksize: int,
         max_peaks: int,
@@ -55,6 +66,11 @@ class InferWorker(QObject):
         roi_h: int,
     ):
         self._target_fps = max(1, int(target_fps))
+        new_threads = max(1, int(torch_num_threads or 1))
+        if new_threads != self.cfg.torch_num_threads and self._runtime == "onnx":
+            self._reload_requested = True
+        self.cfg.torch_num_threads = new_threads
+        self.runner.configure_runtime(self.cfg.torch_num_threads)
         self.cfg.smoothing_alpha = float(smoothing_alpha)
         self.cfg.ksize = int(ksize)
         self.cfg.max_peaks = int(max_peaks)
@@ -88,12 +104,14 @@ class InferWorker(QObject):
         self._running = False
 
     def _try_load(self):
-        if not self._model_path or not self._model_arch:
+        model_path = self._onnx_model_path if self._runtime == "onnx" else self._model_path
+        if not model_path or not self._model_arch:
             return False
         try:
-            self.runner.load(self._model_path, self._model_arch)
+            self.runner.load(model_path, self._model_arch, self._runtime)
+            self._reload_requested = False
             self.status_changed.emit(True)
-            self.bus.publish(AppEvent(AppEventType.LOG, "infer", "model_loaded"))
+            self.bus.publish(AppEvent(AppEventType.LOG, "infer", f"model_loaded:{self._runtime}"))
             return True
         except Exception as e:
             self.status_changed.emit(False)
@@ -103,7 +121,7 @@ class InferWorker(QObject):
     def _loop(self):
         model_ok = False
         while self._running:
-            if not model_ok:
+            if (not model_ok) or self._reload_requested:
                 model_ok = self._try_load()
 
             if self._freeze:

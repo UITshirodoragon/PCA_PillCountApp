@@ -75,6 +75,8 @@ class MainPresenter(QObject):
         self._count_window: deque[int] = deque(maxlen=max(1, int(getattr(self.cfg.model, "count_queue_window", 7) or 7)))
         self._count_result_cache: dict[int, InferResult] = {}
         self._display_count: Optional[int] = None
+        self._syncing_settings = False
+        self._settings_arch: str = str(self.cfg.model.model_arch or "")
         self._lan_ip: str = get_lan_ip()
         self._share_visible_url: str = ""
         self._public_url: str = ""
@@ -145,6 +147,8 @@ class MainPresenter(QObject):
 
         sp.sig_save.connect(self.on_save_settings)
         sp.sig_browse_model.connect(self.on_browse_model)
+        sp.sig_browse_onnx.connect(self.on_browse_onnx_model)
+        sp.ed_model_arch.currentTextChanged.connect(self.on_settings_model_arch_changed)
 
         self.camera_worker.status_changed.connect(self._ui_camera_status)
         self.infer_worker.status_changed.connect(self._ui_model_status)
@@ -177,6 +181,7 @@ class MainPresenter(QObject):
 
     def _sync_settings_page_from_cfg(self):
         sp = self.window.page_settings
+        self._syncing_settings = True
         sp.sp_cam_idx.setValue(int(self.cfg.camera.device_index))
         sp.sp_cam_w.setValue(int(self.cfg.camera.width))
         sp.sp_cam_h.setValue(int(self.cfg.camera.height))
@@ -187,32 +192,73 @@ class MainPresenter(QObject):
         sp.chk_tunnel.setChecked(bool(self.cfg.cloudflare.enabled))
         sp.ed_cloudflared.setText(self.cfg.cloudflare.cloudflared_path)
         ms = self.cfg.model
-        sp.sp_rt_fps.setValue(int(ms.realtime_fps))
-        sp.sp_thr.setValue(int(ms.threshold * 100))
-        sp.sp_ksize.setValue(int(ms.nms_ksize))
-        sp.sp_min_peak.setValue(float(ms.min_peak))
-        sp.sp_max_peaks.setValue(int(ms.max_peaks))
-        sp.sp_smooth.setValue(float(ms.smoothing_alpha))
-        sp.sp_count_window.setValue(int(ms.count_queue_window))
-        sp.sp_count_votes.setValue(int(ms.count_queue_min_votes))
-        sp.chk_roi.setChecked(bool(ms.roi_enabled))
-        sp.sp_roi_x.setValue(int(ms.roi_x))
-        sp.sp_roi_y.setValue(int(ms.roi_y))
-        sp.sp_roi_w.setValue(int(ms.roi_w))
-        sp.sp_roi_h.setValue(int(ms.roi_h))
+        sp.cb_runtime.setCurrentText(ms.runtime)
         sp.ed_model_path.setText(ms.model_path)
-        sp.ed_model_arch.setText(ms.model_arch)
+        sp.ed_onnx_path.setText(ms.onnx_model_path)
+        sp.ed_model_arch.setCurrentText(ms.model_arch)
+        self._settings_arch = str(ms.model_arch or "")
+        self._set_postprocess_controls(ms.postprocess_dict())
         cp = self.window.page_count
         cp.chk_smoothing.blockSignals(True)
         cp.chk_smoothing.setChecked(float(ms.smoothing_alpha) > 0.0)
         cp.chk_smoothing.blockSignals(False)
+        self._syncing_settings = False
         self._apply_model_settings_to_infer()
+
+    def _postprocess_profile_from_settings(self) -> dict:
+        sp = self.window.page_settings
+        return {
+            "threshold": float(sp.sp_thr.value()) / 100.0,
+            "nms_ksize": int(sp.sp_ksize.value()),
+            "min_peak": float(sp.sp_min_peak.value()),
+            "max_peaks": int(sp.sp_max_peaks.value()),
+            "realtime_fps": int(sp.sp_rt_fps.value()),
+            "torch_num_threads": int(sp.sp_torch_threads.value()),
+            "smoothing_alpha": float(sp.sp_smooth.value()),
+            "count_queue_window": int(sp.sp_count_window.value()),
+            "count_queue_min_votes": int(sp.sp_count_votes.value()),
+            "roi_enabled": bool(sp.chk_roi.isChecked()),
+            "roi_x": int(sp.sp_roi_x.value()),
+            "roi_y": int(sp.sp_roi_y.value()),
+            "roi_w": int(sp.sp_roi_w.value()),
+            "roi_h": int(sp.sp_roi_h.value()),
+        }
+
+    def _set_postprocess_controls(self, profile: dict) -> None:
+        sp = self.window.page_settings
+        p = profile or {}
+        sp.sp_rt_fps.setValue(int(p.get("realtime_fps", self.cfg.model.realtime_fps)))
+        sp.sp_thr.setValue(int(round(float(p.get("threshold", self.cfg.model.threshold)) * 100)))
+        sp.sp_ksize.setValue(int(p.get("nms_ksize", self.cfg.model.nms_ksize)))
+        sp.sp_min_peak.setValue(float(p.get("min_peak", self.cfg.model.min_peak)))
+        sp.sp_max_peaks.setValue(int(p.get("max_peaks", self.cfg.model.max_peaks)))
+        sp.sp_torch_threads.setValue(int(p.get("torch_num_threads", self.cfg.model.torch_num_threads)))
+        sp.sp_smooth.setValue(float(p.get("smoothing_alpha", self.cfg.model.smoothing_alpha)))
+        sp.sp_count_window.setValue(int(p.get("count_queue_window", self.cfg.model.count_queue_window)))
+        sp.sp_count_votes.setValue(int(p.get("count_queue_min_votes", self.cfg.model.count_queue_min_votes)))
+        sp.chk_roi.setChecked(bool(p.get("roi_enabled", self.cfg.model.roi_enabled)))
+        sp.sp_roi_x.setValue(int(p.get("roi_x", self.cfg.model.roi_x)))
+        sp.sp_roi_y.setValue(int(p.get("roi_y", self.cfg.model.roi_y)))
+        sp.sp_roi_w.setValue(int(p.get("roi_w", self.cfg.model.roi_w)))
+        sp.sp_roi_h.setValue(int(p.get("roi_h", self.cfg.model.roi_h)))
+
+    @pyqtSlot(str)
+    def on_settings_model_arch_changed(self, arch: str):
+        if self._syncing_settings:
+            return
+        old_arch = self._settings_arch or self.cfg.model.model_arch
+        if old_arch:
+            self.cfg.model.update_postprocess_profile(old_arch, self._postprocess_profile_from_settings())
+        self._settings_arch = str(arch or "")
+        self.cfg.model.ensure_postprocess_profiles(False)
+        profile = self.cfg.model.postprocess_profiles.get(self._settings_arch, self.cfg.model.postprocess_dict())
+        self._set_postprocess_controls(profile)
 
     def _apply_model_settings_to_infer(self):
         ms = self.cfg.model
-        self.infer_worker.set_model(ms.model_path, ms.model_arch)
         self.infer_worker.set_params(
             ms.realtime_fps,
+            ms.torch_num_threads,
             ms.smoothing_alpha,
             ms.nms_ksize,
             ms.max_peaks,
@@ -224,6 +270,7 @@ class MainPresenter(QObject):
             ms.roi_w,
             ms.roi_h,
         )
+        self.infer_worker.set_model(ms.runtime, ms.model_path, ms.onnx_model_path, ms.model_arch)
         self._reset_count_stabilizer()
 
     def _reset_count_stabilizer(self):
@@ -263,13 +310,12 @@ class MainPresenter(QObject):
             chosen_count = int(self._display_count)
 
         self._display_count = chosen_count
-        source = self._count_result_cache.get(chosen_count, res)
         return InferResult(
-            ts_ms=source.ts_ms,
+            ts_ms=res.ts_ms,
             count=chosen_count,
-            centers=source.centers,
-            mask_u8=source.mask_u8,
-            score_map=source.score_map,
+            centers=res.centers,
+            mask_u8=res.mask_u8,
+            score_map=res.score_map,
         )
 
     def _init_workers(self):
@@ -609,10 +655,22 @@ class MainPresenter(QObject):
         path, _ = QFileDialog.getOpenFileName(self.window, "Select model (.pth)", "", "PyTorch model (*.pth)")
         if path: self.window.page_settings.ed_model_path.setText(path)
 
+    def on_browse_onnx_model(self):
+        path, _ = QFileDialog.getOpenFileName(self.window, "Select model (.onnx)", "", "ONNX model (*.onnx)")
+        if path: self.window.page_settings.ed_onnx_path.setText(path)
+
     def on_save_settings(self):
         sp = self.window.page_settings
         self.cfg.camera.device_index = int(sp.sp_cam_idx.value()); self.cfg.camera.width = int(sp.sp_cam_w.value()); self.cfg.camera.height = int(sp.sp_cam_h.value()); self.cfg.camera.fps = int(sp.sp_cam_fps.value())
-        self.cfg.model.model_path = sp.ed_model_path.text().strip(); self.cfg.model.model_arch = sp.ed_model_arch.text().strip(); self.cfg.model.threshold = float(sp.sp_thr.value()) / 100.0; self.cfg.model.nms_ksize = int(sp.sp_ksize.value()); self.cfg.model.min_peak = float(sp.sp_min_peak.value()); self.cfg.model.max_peaks = int(sp.sp_max_peaks.value()); self.cfg.model.realtime_fps = int(sp.sp_rt_fps.value()); self.cfg.model.smoothing_alpha = float(sp.sp_smooth.value()); self.cfg.model.count_queue_window = int(sp.sp_count_window.value()); self.cfg.model.count_queue_min_votes = int(sp.sp_count_votes.value()); self.cfg.model.roi_enabled = bool(sp.chk_roi.isChecked()); self.cfg.model.roi_x = int(sp.sp_roi_x.value()); self.cfg.model.roi_y = int(sp.sp_roi_y.value()); self.cfg.model.roi_w = int(sp.sp_roi_w.value()); self.cfg.model.roi_h = int(sp.sp_roi_h.value())
+        arch = sp.ed_model_arch.currentText().strip()
+        profile = self._postprocess_profile_from_settings()
+        self.cfg.model.runtime = sp.cb_runtime.currentText().strip().lower()
+        self.cfg.model.model_path = sp.ed_model_path.text().strip()
+        self.cfg.model.onnx_model_path = sp.ed_onnx_path.text().strip()
+        self.cfg.model.model_arch = arch
+        self.cfg.model.update_postprocess_profile(arch, profile)
+        self.cfg.model.set_postprocess_dict(profile)
+        self._settings_arch = arch
         self.cfg.share.enable_qr_share = bool(sp.chk_share.isChecked()); self.cfg.share.port = int(sp.sp_share_port.value()); self.cfg.share.token_required = bool(sp.chk_token.isChecked()); self.cfg.share.bind_all = True
         self.cfg.cloudflare.enabled = bool(sp.chk_tunnel.isChecked()); self.cfg.cloudflare.cloudflared_path = sp.ed_cloudflared.text().strip() or "cloudflared"; self.cfg.cloudflare.auto_start = bool(sp.chk_tunnel.isChecked())
         self.cfg.serial.enabled = False; self.cfg.serial.stream_weight = False

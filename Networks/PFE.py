@@ -6,21 +6,23 @@ from torchsummary import summary
 from thop import profile
 
 
-class PFE_module(nn.Module): 
+class PFE_module(nn.Module):
     def __init__(self,inp,dilation=[1,2,3,5],squeeze_radio=2,group_kernel_size=3,group_size=2):
         super().__init__()
+        fused_channels = inp // 2
+        squeezed_channels = fused_channels // squeeze_radio
         self.conv1 = nn.Conv2d(inp, inp//8, kernel_size=3, dilation=dilation[0],padding=1)
         self.conv2 = nn.Conv2d(inp, inp//8, kernel_size=3, dilation=dilation[1],padding=2)
         self.conv3 = nn.Conv2d(inp, inp//8, kernel_size=3, dilation=dilation[2],padding=3)
-        self.conv4 = nn.Conv2d(inp, inp//8, kernel_size=3, dilation=dilation[3],padding=5) 
-        self.conv5 = nn.Conv2d(inp//8,inp//8, kernel_size=3, padding=1,bias=False) 
+        self.conv4 = nn.Conv2d(inp, inp//8, kernel_size=3, dilation=dilation[3],padding=5)
+        self.conv5 = nn.Conv2d(inp//8,inp//8, kernel_size=3, padding=1,bias=False)
         self.pool = nn.AdaptiveAvgPool2d(1)
         self.sigomid = nn.Sigmoid()
         self.conv = nn.Conv2d(inp//2, inp//2, kernel_size=3, padding=1,bias=False)
-        self.squeeze = nn.Conv2d(256, 256 // squeeze_radio, kernel_size=1, bias=False)  # 256 base 1_0 and 64 base 0_25
-        self.GWC = nn.Conv2d(256 // 2, 256, kernel_size=group_kernel_size, stride=1,
-                             padding=group_kernel_size // 2, groups=group_size)  # 256 base 1_0
-        self.PWC = nn.Conv2d(256 // squeeze_radio, 256, kernel_size=1, bias=False) # 256 base 1_0
+        self.squeeze = nn.Conv2d(fused_channels, squeezed_channels, kernel_size=1, bias=False)
+        self.GWC = nn.Conv2d(squeezed_channels, fused_channels, kernel_size=group_kernel_size, stride=1,
+                             padding=group_kernel_size // 2, groups=group_size)
+        self.PWC = nn.Conv2d(squeezed_channels, fused_channels, kernel_size=1, bias=False)
 
     def forward(self, x):
         x1= self.conv1(x)

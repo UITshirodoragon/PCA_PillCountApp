@@ -1,9 +1,65 @@
 from __future__ import annotations
 
+import copy
 import json
 import os
 from dataclasses import dataclass, asdict, field
 from pathlib import Path
+
+
+POSTPROCESS_FIELDS = (
+    "threshold",
+    "nms_ksize",
+    "min_peak",
+    "max_peaks",
+    "realtime_fps",
+    "torch_num_threads",
+    "smoothing_alpha",
+    "count_queue_window",
+    "count_queue_min_votes",
+    "roi_enabled",
+    "roi_x",
+    "roi_y",
+    "roi_w",
+    "roi_h",
+)
+
+
+def default_postprocess_profiles() -> dict:
+    return {
+        "PANetBase": {
+            "threshold": 0.5,
+            "nms_ksize": 5,
+            "min_peak": 0.4,
+            "max_peaks": 500,
+            "realtime_fps": 6,
+            "torch_num_threads": 1,
+            "smoothing_alpha": 0.2,
+            "count_queue_window": 7,
+            "count_queue_min_votes": 2,
+            "roi_enabled": False,
+            "roi_x": 32,
+            "roi_y": 16,
+            "roi_w": 280,
+            "roi_h": 208,
+        },
+        "PANetNano": {
+            "threshold": 0.45,
+            "nms_ksize": 5,
+            "min_peak": 0.25,
+            "max_peaks": 500,
+            "realtime_fps": 6,
+            "torch_num_threads": 1,
+            "smoothing_alpha": 0.15,
+            "count_queue_window": 5,
+            "count_queue_min_votes": 2,
+            "roi_enabled": False,
+            "roi_x": 32,
+            "roi_y": 16,
+            "roi_w": 280,
+            "roi_h": 208,
+        },
+    }
 
 
 @dataclass
@@ -23,13 +79,16 @@ class CameraSettings:
 
 @dataclass
 class ModelSettings:
-    model_path: str = "./Networks/weights/model_best.pth"
-    model_arch: str = "PANet"
+    runtime: str = "pytorch"
+    model_path: str = "./Networks/weights/model_best_nano.pth"
+    onnx_model_path: str = "./Networks/weights/model_best_nano.onnx"
+    model_arch: str = "PANetNano"
     threshold: float = 0.4
     nms_ksize: int = 5
     min_peak: float = 0.25
     max_peaks: int = 500
-    realtime_fps: int = 8
+    realtime_fps: int = 6
+    torch_num_threads: int = 1
     smoothing_alpha: float = 0.0
     count_queue_window: int = 7
     count_queue_min_votes: int = 3
@@ -38,6 +97,40 @@ class ModelSettings:
     roi_y: int = 16
     roi_w: int = 280
     roi_h: int = 208
+    postprocess_profiles: dict = field(default_factory=default_postprocess_profiles)
+
+    def postprocess_dict(self) -> dict:
+        return {k: copy.deepcopy(getattr(self, k)) for k in POSTPROCESS_FIELDS}
+
+    def set_postprocess_dict(self, profile: dict) -> None:
+        profile = profile or {}
+        for k in POSTPROCESS_FIELDS:
+            if k in profile:
+                setattr(self, k, copy.deepcopy(profile[k]))
+
+    def ensure_postprocess_profiles(self, preserve_flat_settings: bool = False) -> None:
+        defaults = default_postprocess_profiles()
+        profiles = copy.deepcopy(defaults)
+        for arch, profile in (self.postprocess_profiles or {}).items():
+            base = profiles.get(arch, {})
+            base.update(profile or {})
+            profiles[arch] = base
+        self.postprocess_profiles = profiles
+
+        if preserve_flat_settings:
+            self.postprocess_profiles[self.model_arch] = self.postprocess_dict()
+
+    def apply_postprocess_profile(self, arch: str | None = None) -> None:
+        arch = arch or self.model_arch
+        self.ensure_postprocess_profiles(False)
+        profile = self.postprocess_profiles.get(arch)
+        if profile:
+            self.set_postprocess_dict(profile)
+
+    def update_postprocess_profile(self, arch: str | None = None, profile: dict | None = None) -> None:
+        arch = arch or self.model_arch
+        self.ensure_postprocess_profiles(False)
+        self.postprocess_profiles[arch] = copy.deepcopy(profile or self.postprocess_dict())
 
 
 @dataclass
@@ -104,14 +197,17 @@ class AppConfig:
                     kwargs[k] = d[k]
             return dc_cls(**kwargs)
 
+        model_data = data.get("model", {})
         cfg = AppConfig(
             camera=_load_dc(CameraSettings, data.get("camera", {})),
-            model=_load_dc(ModelSettings, data.get("model", {})),
+            model=_load_dc(ModelSettings, model_data),
             serial=_load_dc(SerialSettings, data.get("serial", {})),
             share=_load_dc(ShareSettings, data.get("share", {})),
             cloudflare=_load_dc(CloudflareSettings, data.get("cloudflare", {})),
             storage=_load_dc(StorageSettings, data.get("storage", {})),
         )
+        cfg.model.ensure_postprocess_profiles("postprocess_profiles" not in (model_data or {}))
+        cfg.model.apply_postprocess_profile(cfg.model.model_arch)
 
         # v0.1.3: hard-disable serial at runtime even if old config has stream_weight=true.
         cfg.serial.enabled = False

@@ -22,6 +22,7 @@ class InferConfig:
     min_max: float = 1e-6
     max_peaks: int = 500
     smoothing_alpha: float = 0.0  # EMA on output map to reduce jitter
+    torch_num_threads: int = 1
     roi_enabled: bool = False
     roi_x: int = 0
     roi_y: int = 0
@@ -30,13 +31,29 @@ class InferConfig:
 
 
 class ModelRunner:
-    """Loads a .pth model using Networks.model_dict and runs CPU inference."""
+    """Loads a PyTorch or ONNX model and runs CPU inference."""
 
     def __init__(self):
         self._model: Optional[torch.nn.Module] = None
+        self._ort_session: Optional[object] = None
+        self._ort_input_name: str = ""
+        self._ort_output_name: str = ""
+        self._runtime: str = "pytorch"
         self._device = torch.device("cpu")
-        self._loaded_key: Tuple[str, str] | None = None  # (path, arch)
+        self._loaded_key: Tuple[str, str, str] | None = None  # (runtime, path, arch)
         self._ema: Optional[np.ndarray] = None
+        self._torch_num_threads: Optional[int] = None
+
+    def configure_runtime(self, num_threads: int) -> None:
+        n = max(1, int(num_threads or 1))
+        if self._torch_num_threads == n:
+            return
+        try:
+            torch.set_num_threads(n)
+            self._torch_num_threads = n
+            log.info("Torch num_threads=%s", n)
+        except Exception as e:
+            log.warning("Cannot set torch num_threads=%s: %s", n, e)
 
     @staticmethod
     def _lmds_counting(m_use: np.ndarray, cfg: InferConfig) -> Tuple[int, List[Tuple[int, int]], np.ndarray]:
@@ -116,17 +133,55 @@ class ModelRunner:
         return out
 
     def is_loaded(self) -> bool:
-        return self._model is not None
+        return self._model is not None or self._ort_session is not None
 
-    def load(self, model_path: str, model_arch: str) -> None:
+    def load(self, model_path: str, model_arch: str, runtime: str = "pytorch") -> None:
+        runtime = (runtime or "pytorch").strip().lower()
+        if runtime not in ("pytorch", "onnx"):
+            raise ValueError(f"Unsupported model runtime '{runtime}'. Use 'pytorch' or 'onnx'.")
         model_path = os.path.abspath(model_path)
         if not os.path.exists(model_path):
             raise FileNotFoundError(model_path)
         if not model_arch:
             raise ValueError("Model arch is empty. Set Settings → Model arch (Networks.model_dict key).")
 
-        if self._loaded_key == (model_path, model_arch) and self._model is not None:
+        if self._loaded_key == (runtime, model_path, model_arch) and self.is_loaded():
             return
+
+        if runtime == "onnx":
+            self._load_onnx(model_path, model_arch)
+            return
+
+        self._load_pytorch(model_path, model_arch)
+
+    def _load_onnx(self, model_path: str, model_arch: str) -> None:
+        try:
+            import onnxruntime as ort
+        except Exception as e:
+            raise ImportError("ONNX runtime is not installed. Install requirements.txt or `pip install onnxruntime`.") from e
+
+        sess_options = ort.SessionOptions()
+        sess_options.intra_op_num_threads = max(1, int(self._torch_num_threads or 1))
+        sess_options.inter_op_num_threads = 1
+        sess_options.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
+        session = ort.InferenceSession(model_path, sess_options=sess_options, providers=["CPUExecutionProvider"])
+        inputs = session.get_inputs()
+        outputs = session.get_outputs()
+        if not inputs:
+            raise ValueError("ONNX model has no inputs")
+        if not outputs:
+            raise ValueError("ONNX model has no outputs")
+
+        self._model = None
+        self._ort_session = session
+        self._ort_input_name = inputs[0].name
+        self._ort_output_name = outputs[0].name
+        self._runtime = "onnx"
+        self._loaded_key = ("onnx", model_path, model_arch)
+        self._ema = None
+        log.info("Loaded ONNX model: %s (%s)", model_path, model_arch)
+
+    def _load_pytorch(self, model_path: str, model_arch: str) -> None:
 
         try:
             from Networks import model_dict  # type: ignore
@@ -169,13 +224,17 @@ class ModelRunner:
         model.eval()
 
         self._model = model
-        self._loaded_key = (model_path, model_arch)
+        self._ort_session = None
+        self._ort_input_name = ""
+        self._ort_output_name = ""
+        self._runtime = "pytorch"
+        self._loaded_key = ("pytorch", model_path, model_arch)
         self._ema = None
         log.info("Loaded model: %s (%s)", model_path, model_arch)
 
     @torch.inference_mode()
     def infer(self, frame_bgr: np.ndarray, cfg: InferConfig) -> Tuple[int, List[Tuple[int, int]], np.ndarray, np.ndarray]:
-        if self._model is None:
+        if not self.is_loaded():
             raise RuntimeError("Model not loaded")
 
         # Ensure fixed size
@@ -183,13 +242,22 @@ class ModelRunner:
             import cv2
             frame_bgr = cv2.resize(frame_bgr, (INFER_W, INFER_H), interpolation=cv2.INTER_LINEAR)
 
-        x = imagenet_preprocess_bgr(frame_bgr).to(self._device)  # (1,3,H,W)
+        x = imagenet_preprocess_bgr(frame_bgr)
 
-        y = self._model(x)
-        if isinstance(y, (tuple, list)):
-            y = y[0]
-        if not isinstance(y, torch.Tensor):
-            raise ValueError("Model output is not a Tensor")
+        if self._runtime == "onnx":
+            if self._ort_session is None:
+                raise RuntimeError("ONNX session not loaded")
+            y_np = self._ort_session.run([self._ort_output_name], {self._ort_input_name: x.cpu().numpy().astype(np.float32)})[0]
+            y = torch.from_numpy(y_np)
+        else:
+            if self._model is None:
+                raise RuntimeError("PyTorch model not loaded")
+            x = x.to(self._device)  # (1,3,H,W)
+            y = self._model(x)
+            if isinstance(y, (tuple, list)):
+                y = y[0]
+            if not isinstance(y, torch.Tensor):
+                raise ValueError("Model output is not a Tensor")
 
         # map (H,W)
         if y.ndim == 4:

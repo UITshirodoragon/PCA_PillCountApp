@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, QLabel, QLineEdit, QPushButton,
-    QSpinBox, QDoubleSpinBox, QCheckBox, QFrame
+    QSpinBox, QDoubleSpinBox, QCheckBox, QFrame, QComboBox
 )
 from PyQt6.QtCore import pyqtSignal
 
@@ -10,6 +10,7 @@ from PyQt6.QtCore import pyqtSignal
 class SettingsPage(QWidget):
     sig_save = pyqtSignal()
     sig_browse_model = pyqtSignal()
+    sig_browse_onnx = pyqtSignal()
 
     def __init__(self):
         super().__init__()
@@ -32,14 +33,18 @@ class SettingsPage(QWidget):
         self.sp_cam_h = QSpinBox(); self.sp_cam_h.setProperty("kb_label", "Camera height"); self.sp_cam_h.setRange(240, 1080); self.sp_cam_h.setSingleStep(120)
         self.sp_cam_fps = QSpinBox(); self.sp_cam_fps.setProperty("kb_label", "Camera FPS"); self.sp_cam_fps.setRange(1, 60)
 
-        self.ed_model_path = QLineEdit(); self.ed_model_path.setProperty("kb_label", "Model path")
+        self.cb_runtime = QComboBox(); self.cb_runtime.setProperty("kb_label", "Runtime"); self.cb_runtime.addItems(["pytorch", "onnx"])
+        self.ed_model_path = QLineEdit(); self.ed_model_path.setProperty("kb_label", "PyTorch model path")
         self.btn_browse = QPushButton("Browse")
-        self.ed_model_arch = QLineEdit(); self.ed_model_arch.setProperty("kb_label", "Model arch"); self.ed_model_arch.setPlaceholderText("PANet")
+        self.ed_onnx_path = QLineEdit(); self.ed_onnx_path.setProperty("kb_label", "ONNX model path")
+        self.btn_browse_onnx = QPushButton("Browse")
+        self.ed_model_arch = QComboBox(); self.ed_model_arch.setProperty("kb_label", "Model arch"); self.ed_model_arch.addItems(["PANetNano", "PANetBase"])
         self.sp_thr = QSpinBox(); self.sp_thr.setProperty("kb_label", "Threshold percent"); self.sp_thr.setRange(1, 99)
         self.sp_ksize = QSpinBox(); self.sp_ksize.setProperty("kb_label", "NMS kernel size"); self.sp_ksize.setRange(3, 21); self.sp_ksize.setSingleStep(2)
         self.sp_min_peak = QDoubleSpinBox(); self.sp_min_peak.setProperty("kb_label", "Minimum peak score"); self.sp_min_peak.setRange(0.0, 5.0); self.sp_min_peak.setDecimals(3); self.sp_min_peak.setSingleStep(0.05)
         self.sp_max_peaks = QSpinBox(); self.sp_max_peaks.setProperty("kb_label", "Max peaks"); self.sp_max_peaks.setRange(10, 5000)
         self.sp_rt_fps = QSpinBox(); self.sp_rt_fps.setProperty("kb_label", "Realtime inference FPS"); self.sp_rt_fps.setRange(1, 30)
+        self.sp_torch_threads = QSpinBox(); self.sp_torch_threads.setProperty("kb_label", "Model CPU threads"); self.sp_torch_threads.setRange(1, 8)
         self.sp_smooth = QDoubleSpinBox(); self.sp_smooth.setProperty("kb_label", "Smoothing alpha"); self.sp_smooth.setRange(0.0, 0.95); self.sp_smooth.setSingleStep(0.05)
         self.sp_count_window = QSpinBox(); self.sp_count_window.setProperty("kb_label", "Count queue window"); self.sp_count_window.setRange(1, 31); self.sp_count_window.setSingleStep(2)
         self.sp_count_votes = QSpinBox(); self.sp_count_votes.setProperty("kb_label", "Count min votes"); self.sp_count_votes.setRange(1, 31)
@@ -59,17 +64,20 @@ class SettingsPage(QWidget):
         grid.addWidget(QLabel("Camera index"), r, 0); grid.addWidget(self.sp_cam_idx, r, 1)
         grid.addWidget(QLabel("Resolution"), r, 2); grid.addWidget(self.sp_cam_w, r, 3); grid.addWidget(self.sp_cam_h, r, 4)
         grid.addWidget(QLabel("FPS"), r, 5); grid.addWidget(self.sp_cam_fps, r, 6); r += 1
-        grid.addWidget(QLabel("Model path"), r, 0); grid.addWidget(self.ed_model_path, r, 1, 1, 5); grid.addWidget(self.btn_browse, r, 6); r += 1
-        grid.addWidget(QLabel("Model arch"), r, 0); grid.addWidget(self.ed_model_arch, r, 1, 1, 2)
+        grid.addWidget(QLabel("Runtime"), r, 0); grid.addWidget(self.cb_runtime, r, 1)
+        grid.addWidget(QLabel("Model arch"), r, 2); grid.addWidget(self.ed_model_arch, r, 3, 1, 2); r += 1
+        grid.addWidget(QLabel("PyTorch model"), r, 0); grid.addWidget(self.ed_model_path, r, 1, 1, 5); grid.addWidget(self.btn_browse, r, 6); r += 1
+        grid.addWidget(QLabel("ONNX model"), r, 0); grid.addWidget(self.ed_onnx_path, r, 1, 1, 5); grid.addWidget(self.btn_browse_onnx, r, 6); r += 1
         grid.addWidget(QLabel("Threshold (%)"), r, 3); grid.addWidget(self.sp_thr, r, 4)
         grid.addWidget(QLabel("NMS"), r, 5); grid.addWidget(self.sp_ksize, r, 6); r += 1
         grid.addWidget(QLabel("Realtime FPS"), r, 0); grid.addWidget(self.sp_rt_fps, r, 1)
         grid.addWidget(QLabel("Max peaks"), r, 2); grid.addWidget(self.sp_max_peaks, r, 3)
         grid.addWidget(QLabel("Min peak"), r, 4); grid.addWidget(self.sp_min_peak, r, 5); r += 1
-        grid.addWidget(QLabel("Smoothing"), r, 0); grid.addWidget(self.sp_smooth, r, 1)
-        grid.addWidget(QLabel("Queue"), r, 2); grid.addWidget(self.sp_count_window, r, 3)
-        grid.addWidget(QLabel("Votes"), r, 4); grid.addWidget(self.sp_count_votes, r, 5)
-        grid.addWidget(self.chk_roi, r, 6); r += 1
+        grid.addWidget(QLabel("CPU threads"), r, 0); grid.addWidget(self.sp_torch_threads, r, 1)
+        grid.addWidget(QLabel("Smoothing"), r, 2); grid.addWidget(self.sp_smooth, r, 3)
+        grid.addWidget(QLabel("Queue"), r, 4); grid.addWidget(self.sp_count_window, r, 5)
+        grid.addWidget(QLabel("Votes"), r, 6); grid.addWidget(self.sp_count_votes, r, 7); r += 1
+        grid.addWidget(self.chk_roi, r, 0, 1, 2); r += 1
         grid.addWidget(QLabel("ROI x/y"), r, 0); grid.addWidget(self.sp_roi_x, r, 1); grid.addWidget(self.sp_roi_y, r, 2)
         grid.addWidget(QLabel("ROI w/h"), r, 3); grid.addWidget(self.sp_roi_w, r, 4); grid.addWidget(self.sp_roi_h, r, 5); r += 1
         grid.addWidget(self.chk_share, r, 0, 1, 2); grid.addWidget(QLabel("Port"), r, 2); grid.addWidget(self.sp_share_port, r, 3); grid.addWidget(self.chk_token, r, 4, 1, 3); r += 1
@@ -87,3 +95,23 @@ class SettingsPage(QWidget):
 
         self.btn_save.clicked.connect(self.sig_save)
         self.btn_browse.clicked.connect(self.sig_browse_model)
+        self.btn_browse_onnx.clicked.connect(self.sig_browse_onnx)
+        self.ed_model_arch.currentTextChanged.connect(self._apply_model_arch_default)
+
+    def _apply_model_arch_default(self, arch: str):
+        defaults = {
+            "PANetNano": "./Networks/weights/model_best_nano.pth",
+            "PANetBase": "./Networks/weights/model_best_base.pth",
+        }
+        onnx_defaults = {
+            "PANetNano": "./Networks/weights/model_best_nano.onnx",
+            "PANetBase": "./Networks/weights/model_best_base.onnx",
+        }
+        current = self.ed_model_path.text().strip()
+        known = set(defaults.values()) | {"./Networks/weights/model_best.pth"}
+        if arch in defaults and (not current or current in known):
+            self.ed_model_path.setText(defaults[arch])
+        current_onnx = self.ed_onnx_path.text().strip()
+        known_onnx = set(onnx_defaults.values())
+        if arch in onnx_defaults and (not current_onnx or current_onnx in known_onnx):
+            self.ed_onnx_path.setText(onnx_defaults[arch])
