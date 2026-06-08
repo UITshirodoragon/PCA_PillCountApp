@@ -148,6 +148,9 @@ class MainPresenter(QObject):
         sp.sig_save.connect(self.on_save_settings)
         sp.sig_browse_model.connect(self.on_browse_model)
         sp.sig_browse_onnx.connect(self.on_browse_onnx_model)
+        sp.sig_full_screen.connect(self.on_full_screen)
+        sp.sig_windowed.connect(self.on_windowed)
+        sp.sig_quit_app.connect(self.on_quit_app)
         sp.ed_model_arch.currentTextChanged.connect(self.on_settings_model_arch_changed)
 
         self.camera_worker.status_changed.connect(self._ui_camera_status)
@@ -658,6 +661,21 @@ class MainPresenter(QObject):
     def on_browse_onnx_model(self):
         path, _ = QFileDialog.getOpenFileName(self.window, "Select model (.onnx)", "", "ONNX model (*.onnx)")
         if path: self.window.page_settings.ed_onnx_path.setText(path)
+
+    @pyqtSlot()
+    def on_full_screen(self):
+        self.window.show_app_full_screen()
+        self.bus.publish(AppEvent(AppEventType.LOG, "app", "Switched to full screen"))
+
+    @pyqtSlot()
+    def on_windowed(self):
+        self.window.show_app_windowed()
+        self.bus.publish(AppEvent(AppEventType.LOG, "app", "Switched to 1024x600 windowed mode"))
+
+    @pyqtSlot()
+    def on_quit_app(self):
+        self.bus.publish(AppEvent(AppEventType.LOG, "app", "Quit app requested"))
+        QApplication.quit()
 
     def on_save_settings(self):
         sp = self.window.page_settings

@@ -14,13 +14,18 @@ from app.ui.widgets.virtual_keyboard import VirtualKeyboardWidget
 from app.ui.widgets.app_overlay import AppOverlay
 
 
+APP_WINDOW_WIDTH = 1024
+APP_WINDOW_HEIGHT = 600
+QT_WIDGET_MAX_SIZE = 16777215
+
+
 class MainWindow(QMainWindow):
     sig_show_page = pyqtSignal(str)
 
     def __init__(self, qss_path: str):
         super().__init__()
         self.setWindowTitle("Pill Counter")
-        self.setMinimumSize(1024, 600)
+        self.setFixedSize(APP_WINDOW_WIDTH, APP_WINDOW_HEIGHT)
 
         cw = QWidget()
         cw.setObjectName("RootWidget")
@@ -122,6 +127,23 @@ class MainWindow(QMainWindow):
         self._t.timeout.connect(self._tick_time)
         self._t.start()
         self.show_page("menu")
+
+    def show_app_windowed(self) -> None:
+        self.showNormal()
+        self.setFixedSize(APP_WINDOW_WIDTH, APP_WINDOW_HEIGHT)
+        self.resize(APP_WINDOW_WIDTH, APP_WINDOW_HEIGHT)
+        self.show()
+        self._place_floating_menu()
+        self._place_keyboard_overlay()
+        self._place_drawer(0 if self.drawer.isVisible() else -224)
+
+    def show_app_full_screen(self) -> None:
+        self.setMinimumSize(APP_WINDOW_WIDTH, APP_WINDOW_HEIGHT)
+        self.setMaximumSize(QT_WIDGET_MAX_SIZE, QT_WIDGET_MAX_SIZE)
+        self.showFullScreen()
+        self._place_floating_menu()
+        self._place_keyboard_overlay()
+        self._place_drawer(0 if self.drawer.isVisible() else -224)
 
     def _drawer_nav(self, name: str) -> None:
         self.close_drawer()

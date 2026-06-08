@@ -24,7 +24,7 @@ def main():
     app = QApplication(sys.argv)
     win = MainWindow(qss_path="resources/styles/app.qss")
     presenter = MainPresenter(win, cfg)
-    win.showFullScreen()
+    win.show_app_windowed()
 
     def _shutdown():
         try:

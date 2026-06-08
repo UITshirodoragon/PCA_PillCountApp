@@ -11,6 +11,9 @@ class SettingsPage(QWidget):
     sig_save = pyqtSignal()
     sig_browse_model = pyqtSignal()
     sig_browse_onnx = pyqtSignal()
+    sig_full_screen = pyqtSignal()
+    sig_windowed = pyqtSignal()
+    sig_quit_app = pyqtSignal()
 
     def __init__(self):
         super().__init__()
@@ -86,16 +89,31 @@ class SettingsPage(QWidget):
         root.addWidget(card, 1)
 
         bottom = QHBoxLayout()
-        bottom.addStretch(1)
+        self.btn_full_screen = QPushButton("Full Screen")
+        self.btn_full_screen.setObjectName("SecondaryButton")
+        self.btn_full_screen.setMinimumHeight(50)
+        self.btn_windowed = QPushButton("Windows")
+        self.btn_windowed.setObjectName("SecondaryButton")
+        self.btn_windowed.setMinimumHeight(50)
+        self.btn_quit_app = QPushButton("Quit App")
+        self.btn_quit_app.setObjectName("DangerButton")
+        self.btn_quit_app.setMinimumHeight(50)
         self.btn_save = QPushButton("Save Settings")
         self.btn_save.setObjectName("PrimaryButton")
         self.btn_save.setMinimumHeight(58)
+        bottom.addWidget(self.btn_full_screen)
+        bottom.addWidget(self.btn_windowed)
+        bottom.addWidget(self.btn_quit_app)
+        bottom.addStretch(1)
         bottom.addWidget(self.btn_save)
         root.addLayout(bottom)
 
         self.btn_save.clicked.connect(self.sig_save)
         self.btn_browse.clicked.connect(self.sig_browse_model)
         self.btn_browse_onnx.clicked.connect(self.sig_browse_onnx)
+        self.btn_full_screen.clicked.connect(lambda _checked=False: self.sig_full_screen.emit())
+        self.btn_windowed.clicked.connect(lambda _checked=False: self.sig_windowed.emit())
+        self.btn_quit_app.clicked.connect(lambda _checked=False: self.sig_quit_app.emit())
         self.ed_model_arch.currentTextChanged.connect(self._apply_model_arch_default)
 
     def _apply_model_arch_default(self, arch: str):
